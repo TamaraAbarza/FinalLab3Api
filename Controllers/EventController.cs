@@ -90,9 +90,6 @@ namespace eventosApi.Controllers
                 if (ev == null)
                     return NotFound("Evento no encontrado.");
 
-                if (model.Date.Date < DateTime.Today)
-                    return BadRequest("La fecha del evento debe ser mayor o igual a la fecha actual.");
-
                 ev.Name = model.Name;
                 ev.Date = model.Date;
                 ev.Location = model.Location;
@@ -293,7 +290,7 @@ namespace eventosApi.Controllers
                     await imagenFile.CopyToAsync(fileStream);
                 }
 
-                return "uploads/" + uniqueFileName; // Devolver la URL de la imagen cargada
+                return "uploads/" + uniqueFileName; // URL de la imagen cargada
             }
 
             return null;

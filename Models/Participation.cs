@@ -14,12 +14,10 @@ namespace eventosApi.Models
         [Required]
         public bool IsConfirmed { get; set; }
 
-        // Relación con el modelo User
         [ForeignKey("UserId")]
         public int UserId { get; set; }
         public User User { get; set; }
 
-        // Relación con el modelo Event
         [ForeignKey("EventId")]
         public int EventId { get; set; }
         public Event Event { get; set; }

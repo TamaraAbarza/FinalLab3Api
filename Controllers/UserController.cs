@@ -74,14 +74,13 @@ namespace eventosApi.Controllers
             if (user == null)
                 return NotFound("Usuario no encontrado.");
 
-            // Verificar si están presentes contraseña actual y nueva
+            // Verifica contraseña actual y nueva
             if (!string.IsNullOrEmpty(model.CurrentPassword) || !string.IsNullOrEmpty(model.NewPassword))
             {
-                // Deben venir ambas
                 if (string.IsNullOrEmpty(model.CurrentPassword) || string.IsNullOrEmpty(model.NewPassword))
                     return BadRequest("Para cambiar la contraseña se debe enviar la contraseña actual y la nueva.");
 
-                // Calcular hash de la contraseña actual
+                // hash 
                 var currentHashed = Convert.ToBase64String(
                     KeyDerivation.Pbkdf2(
                         password: model.CurrentPassword,
@@ -95,7 +94,6 @@ namespace eventosApi.Controllers
                 if (user.PasswordHash != currentHashed)
                     return BadRequest("La contraseña actual es incorrecta.");
 
-                // Verificar que la nueva contraseña no sea igual a la actual
                 var newHashedCompare = Convert.ToBase64String(
                     KeyDerivation.Pbkdf2(
                         password: model.NewPassword,
@@ -108,7 +106,6 @@ namespace eventosApi.Controllers
                 if (newHashedCompare == currentHashed)
                     return BadRequest("La nueva contraseña no puede ser igual a la actual.");
 
-                // Asignar el nuevo hash
                 user.PasswordHash = newHashedCompare;
             }
 
@@ -122,7 +119,6 @@ namespace eventosApi.Controllers
                 user.Email = model.Email;
             }
 
-            // Actualizar username si cambió
             if (!string.IsNullOrWhiteSpace(model.Username) && model.Username != user.Username)
             {
                 user.Username = model.Username;
@@ -179,20 +175,17 @@ namespace eventosApi.Controllers
         [Authorize(Roles = "Organizador,Administrador")]
         public async Task<IActionResult> UpdateUserRole(int id, [FromForm] Role newRole)
         {
-            // Buscar al usuario por su Id
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
             {
                 return NotFound("Usuario no encontrado.");
             }
 
-            // Verificar si el rol es diferente para evitar una actualización innecesaria
             if (user.Role == newRole)
             {
                 return Ok("El rol del usuario ya es el especificado. No se realizaron cambios.");
             }
 
-            // Asignar el nuevo rol y guardar los cambios
             user.Role = newRole;
             await _context.SaveChangesAsync();
 
@@ -201,100 +194,27 @@ namespace eventosApi.Controllers
 
         // DELETE api/user/{id} ---------------------------------------------------------------------------
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Administrador")]
+        [Authorize(Roles = "Organizador, Administrador")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-            if (user == null)
-                return NotFound("Usuario no encontrado.");
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return Ok("Usuario eliminado correctamente.");
-        }
-
-
-
-        /*
-
-        // GET api/user/{id} ----------------------------------------------------------------
-        [HttpGet("{id}")]
-        [Authorize]
-        public async Task<IActionResult> GetUserId(int id)
-        {
-            // Buscar el usuario por ID
             var user = await _context.Users
-                .AsNoTracking()  // No se realiza seguimiento de cambios en este caso
-                .Where(u => u.Id == id)
-                .Select(u => new
-                {
-                    u.Id,
-                    u.Username,
-                    u.Email,
-                    Role = u.Role.ToString()
-                })
-                .FirstOrDefaultAsync();
-
+                                     .Include(u => u.Participations)
+                                     .FirstOrDefaultAsync(u => u.Id == id);
+            
             if (user == null)
+            {
                 return NotFound("Usuario no encontrado.");
-
-            return Ok(user);
-        }*/
-
-        /*
-        // PUT api/user/update/{id} -----------------------------------------------------------------------
-        [HttpPut("update/{id}")]
-        [Authorize(Roles = "Administrador")]
-        public async Task<IActionResult> UpdateUserAdmin(int id, [FromForm] UpdateUserAdminModel model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-            if (user == null)
-                return NotFound("Usuario no encontrado.");
-
-            // Si se envía email diferente, verificar unicidad
-            if (!string.IsNullOrWhiteSpace(model.Email) && model.Email != user.Email)
-            {
-                var exists = await _context.Users.AnyAsync(u => u.Email == model.Email && u.Id != id);
-                if (exists)
-                    return BadRequest("Ya existe otro usuario con ese correo.");
-
-                user.Email = model.Email;
             }
 
-            // Actualizar username si viene
-            if (!string.IsNullOrWhiteSpace(model.Username) && model.Username != user.Username)
-            {
-                user.Username = model.Username;
-            }
-
-            // Actualizar rol si viene
-            if (model.Role.HasValue && model.Role.Value != user.Role)
-            {
-                user.Role = model.Role.Value;
-            }
-
-            // Si el admin quiere cambiar la contraseña
-            if (!string.IsNullOrEmpty(model.NewPassword))
-            {
-                // Calcular hash de la nueva contraseña
-                var newHashed = Convert.ToBase64String(
-                    KeyDerivation.Pbkdf2(
-                        password: model.NewPassword,
-                        salt: Encoding.ASCII.GetBytes(_config["Salt"]),
-                        prf: KeyDerivationPrf.HMACSHA1,
-                        iterationCount: 1000,
-                        numBytesRequested: 256 / 8
-                    )
-                );
-                user.PasswordHash = newHashed;
-            }
-
+            // Eliminar todas las participaciones asociadas al usuario
+            _context.Participations.RemoveRange(user.Participations);
+            
+            _context.Users.Remove(user);
+            
             await _context.SaveChangesAsync();
-            return Ok("Usuario actualizado correctamente.");
+            
+            return Ok("Usuario y sus participaciones eliminados correctamente.");
         }
-*/
+
     }
 }

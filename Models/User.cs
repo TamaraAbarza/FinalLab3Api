@@ -9,7 +9,7 @@ namespace eventosApi.Models
     // Enum para los roles
     public enum Role
     {
-        Usuario, // Rol de usuario normal
+        Usuario,
         Organizador,
         Administrador
     }
@@ -27,11 +27,14 @@ namespace eventosApi.Models
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]
-        public Role Role { get; set; } = Role.Usuario; // Valor predeterminado: Usuario
+        public Role Role { get; set; } = Role.Usuario;
+
+         //navegación para las participaciones del usuario
+        public ICollection<Participation> Participations { get; set; }
 
         public override string ToString()
         {
-            return Role.ToString(); // Devuelve el nombre del rol en lugar del valor numérico
+            return Role.ToString();
         }
     }
 }

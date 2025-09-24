@@ -46,29 +46,24 @@ namespace eventosApi.Controllers
         {
             try
             {
-                // Obtener el email del usuario desde el token
                 var userEmail = User.Identity?.Name;
 
                 if (string.IsNullOrEmpty(userEmail))
                     return Unauthorized(new { message = "No se pudo identificar al usuario." });
 
-                // Buscar el usuario en la base de datos
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                 if (user == null)
                     return Unauthorized(new { message = "Usuario no encontrado." });
 
-                // Validar que el evento exista
                 var eventEntity = await _context.Events.FindAsync(eventId);
                 if (eventEntity == null)
                     return NotFound(new { message = "Evento no encontrado." });
 
-                // Validar que el evento no sea pasado
                 if (eventEntity.Date.Date < DateTime.Today)
                     return BadRequest(
                         new { message = "No está permitido inscribirse en un evento pasado." }
                     );
 
-                // Verificar si el usuario ya está inscrito en este evento
                 var existingParticipation = await _context.Participations.FirstOrDefaultAsync(p =>
                     p.UserId == user.Id && p.EventId == eventId
                 );
@@ -76,7 +71,6 @@ namespace eventosApi.Controllers
                 if (existingParticipation != null)
                     return BadRequest(new { message = "Ya estás inscrito en este evento." });
 
-                // Crear nueva participación
                 var participation = new Participation
                 {
                     UserId = user.Id,
@@ -112,7 +106,6 @@ namespace eventosApi.Controllers
         {
             try
             {
-                // Buscar la participación por ID
                 var participation = await _context.Participations
                     .Include(p => p.Event)
                     .Include(p => p.User)
@@ -121,13 +114,12 @@ namespace eventosApi.Controllers
                 if (participation == null)
                     return NotFound(new { message = "Participación no encontrada." });
 
-                // Validar que no se pueda confirmar si el evento aún no ha ocurrido
+                // Valida que no se pueda confirmar si el evento aún no ha ocurrido
                 if (isConfirmed && participation.Event.Date > DateTime.Now)
                 {
                     return BadRequest(new { message = "No se puede confirmar la participación en un evento que aún no ha ocurrido." });
                 }
 
-                // Actualizar el estado
                 participation.IsConfirmed = isConfirmed;
 
                 _context.Participations.Update(participation);
@@ -187,10 +179,8 @@ namespace eventosApi.Controllers
         {
             try
             {
-                //usuario logueado
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                //participación del usuario del evento id
                 var participation = await _context.Participations
                     .FirstOrDefaultAsync(p => p.EventId == eventId && p.UserId == userId);
 
@@ -231,7 +221,7 @@ namespace eventosApi.Controllers
                                     .AsNoTracking()
                                     .Include(p => p.User)
                                     .Include(p => p.Event)
-                                    .OrderBy(p => p.Event.Date); // misma lógica: orden por fecha del evento
+                                    .OrderBy(p => p.Event.Date);
 
                 var totalRegistros = await query.CountAsync();
 
@@ -386,7 +376,7 @@ namespace eventosApi.Controllers
                                     .Where(p => p.EventId == id)
                                     .Include(p => p.User)
                                     .Include(p => p.Event)
-                                    .OrderBy(p => p.User.Id); // ordenar por usuario (o cambiá a lo que prefieras)
+                                    .OrderBy(p => p.User.Id);
 
                 var totalRegistros = await query.CountAsync();
 
